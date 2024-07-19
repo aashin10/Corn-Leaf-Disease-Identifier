@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload dataset to webpage</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #upload-container {
+      background-color: #f1f1f1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 20px;
+      margin: 20px auto;
+      text-align: center;
+      width: 50%;
+    }
+    #upload-button, #camera-button, #capture-button, #split-dataset {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 15px 32px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    #image-container {
+      width: 300px;
+      height: 200px;
+      background-image: url('assets/default.jpg');
+      background-size: cover;
+      background-position: center;
+    }
+    #image-preview {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+    #predicted-class {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    #video-container {
+      margin: 20px auto;
+      width: 50%;
+      display: none;
+    }
+    #camera-stream {
+      width: 100%;
+    }
+    .navbar {
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px 20px;
+      border-radius: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 90%;
+      max-width: 1200px;
+      position: fixed;
+      top: 3rem;
+      margin-top: 0.0rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+    .logo img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .logo h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .navbar-links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .navbar-links a {
+      color: #333;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+      transition: background-color 0.3s ease;
+    }
+    .navbar-links a:hover {
+      background-color: #eee;
+    }
+    .login-button {
+      background-color: #007bff;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    .login-button:hover {
+      background-color: #0056b3;
+    }
+    .fatherContainer {
+      border-radius: 30px;
+      background: #e4d9ff;
+      box-shadow: 35px 35px 70px #41417a, -35px -35px 70px #5959a4;
+      padding: 20px;
+      margin-top: 160px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+    }
+  </style>
+</head>
+<body>
+  <!--navbar-->
+  <nav class="navbar">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="DietX Logo">
+      <h1>DietX</h1>
+    </div>
+    <div class="navbar-links">
+      <a href="/welcome">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/contact">Contact Us</a>
+    </div>
+    <a href="/" class="login-button">Try AI</a>
+  </nav>
+  <div class="fatherContainer">
+    <div id="upload-container">
+      <form id="upload-form" enctype="multipart/form-data">
+        <h1>Press the button below to start the SERVER Process</h1>
+        <button type="button" id="server-start">Start Server</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    const uploadForm = document.getElementById('upload-form');
+    const datasetInput = document.getElementById('dataset-input');
+    const outputContainer = document.getElementById('output');
+    const predictedClassContainer = document.getElementById('predicted-class');
+
+    // Event listener for form submission
+    uploadForm.addEventListener('submit', async (event) => {
+      event.preventDefault(); // Prevent default form submission behavior
+
+      const files = datasetInput.files;
+      if (files.length === 0) {
+        console.error('No files selected.');
+        return;
+      }
+
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files[]', files[i]);
+      }
+
+      try {
+        const response = await fetch('/upload_dataset', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+
+        // Display output and additional information on the webpage
+        outputContainer.innerHTML = data.output;
+        predictedClassContainer.textContent = 'Predicted Class: ' + data.predicted_class;
+
+        let totalNutrientsHTML = '<div style="font-size: 18px;"><b>Total Nutrients Sum:</b><br>';
+        for (const nutrient in data.total_nutrients_sum) {
+          totalNutrientsHTML += nutrient + ': ' + data.total_nutrients_sum[nutrient] + '<br>';
+        }
+        totalNutrientsHTML += '</div>';
+        outputContainer.innerHTML += totalNutrientsHTML;
+
+        outputContainer.innerHTML += '<div style="font-size: 18px;"><b>Result:</b> <span style="font-weight: bold;">' + data.result + '</span></div>';
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    document.getElementById('split-dataset').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/splitDataset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})  // You can add any data you need to send to the server here
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert(data.message);
+        } else {
+          alert('Failed to split dataset: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred: ' + error.message);
+      }
+    });
+
+    document.getElementById('server-start').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/serverStart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})  // You can add any data you need to send to the server here
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert(data.message);
+        } else {
+          alert('Failed to split dataset: ' + (data.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
